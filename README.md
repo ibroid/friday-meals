@@ -1,36 +1,93 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Friday Meals
 
-## Getting Started
+Friday Meals is a premium homemade cookies and bakery e-commerce platform built with Next.js, Prisma, and MariaDB.
 
-First, run the development server:
+## Features
+- **User Authentication**: Secure login and registration.
+- **Product Catalog**: Browse and manage bakery products.
+- **Cart & Checkout**: Add items to cart and checkout with multiple payment methods (Bank Transfer, QRIS, etc.).
+- **Admin Dashboard**: Manage products, orders, users, and bank accounts.
+- **Payment Verification**: Upload payment proofs for manual verification.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Tech Stack
+- **Framework**: Next.js 15 (App Router)
+- **Database**: MariaDB 10.11
+- **ORM**: Prisma
+- **Styling**: Tailwind CSS & Shadcn UI
+- **Auth**: NextAuth.js
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🛠 Local Development
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. **Clone and Install Dependencies**
+   ```bash
+   git clone <repo-url>
+   cd fridaymeals
+   npm install
+   ```
 
-## Learn More
+2. **Setup Environment Variables**
+   Create a `.env` file in the root directory:
+   ```env
+   DATABASE_URL="mysql://root:root@localhost:3306/fridaymeals"
+   NEXTAUTH_URL="http://localhost:3000"
+   NEXTAUTH_SECRET="your-super-secret-key"
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+3. **Start Database (Development)**
+   Run MariaDB using Docker Compose (only the mariadb service):
+   ```bash
+   docker compose up -d mariadb
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+4. **Initialize Database**
+   ```bash
+   npx prisma db push
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+5. **Start Development Server**
+   ```bash
+   npm run dev
+   ```
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🚀 Production Deployment (Docker)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The easiest and most reliable way to deploy Friday Meals to a production server (VPS, Cloud Server, etc.) is by using **Docker Compose**. The provided configuration will spin up both the MariaDB database and the Next.js standalone server in isolated, optimized containers.
+
+### Prerequisites
+Make sure you have [Docker](https://docs.docker.com/engine/install/) and [Docker Compose](https://docs.docker.com/compose/install/) installed on your server.
+
+### Deployment Steps
+
+1. **Clone the Repository to your Server**
+   ```bash
+   git clone <repo-url>
+   cd fridaymeals
+   ```
+
+2. **Configure Production Environment Variables**
+   Create a `.env` file in the root directory:
+   ```env
+   NEXTAUTH_URL="https://your-domain.com"
+   NEXTAUTH_SECRET="generate-a-strong-secret-key-here"
+   ```
+   *(Note: The database URL is already handled internally by the docker-compose network).*
+
+3. **Build and Run the Containers**
+   Execute the following command to build the Next.js production image and start all services in detached mode:
+   ```bash
+   docker compose up -d --build
+   ```
+
+4. **Verify Deployment**
+   - Wait a few seconds for the database to initialize and Next.js to start.
+   - The application automatically pushes the Prisma schema to the database on startup.
+   - You can view the application running on port `3000`. If you are using a reverse proxy like Nginx or Cloudflare Tunnels, point it to `http://localhost:3000`.
+
+### Persistent Data
+The `docker-compose.yml` file is configured with **Docker Volumes** to ensure your data is safe and persistent across restarts:
+- `mariadb_data`: Stores all database tables and records.
+- `uploads_data`: Stores all images uploaded by users (e.g., payment proofs) in `public/uploads`.
