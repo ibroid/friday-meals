@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import UploadProofButton from "./UploadProofButton";
+import NomorRekeningList from "./NomorRekeningList";
 
 export default async function UserOrdersPage(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -34,7 +35,7 @@ export default async function UserOrdersPage(props: {
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <h1 className="text-3xl font-bold mb-8">My Orders</h1>
-      
+
       {isSuccess && (
         <div className="bg-green-100 text-green-800 p-4 rounded-md mb-6">
           Thank you! Your order has been placed successfully.
@@ -70,21 +71,12 @@ export default async function UserOrdersPage(props: {
                     <p className="font-bold">Rp {Number(order.total).toLocaleString("id-ID")}</p>
                   </div>
                 </div>
-                
-                <div className="space-y-2">
-                  <h4 className="font-medium text-sm text-muted-foreground">Items</h4>
-                  {order.orderItems.map((item: any) => (
-                    <div key={item.id} className="flex justify-between items-center bg-muted/50 p-2 rounded">
-                      <div className="flex items-center gap-3">
-                        <span className="font-medium">{item.product.name}</span>
-                        <span className="text-xs text-muted-foreground">x{item.quantity}</span>
-                      </div>
-                      <span>Rp {Number(item.price).toLocaleString("id-ID")}</span>
-                    </div>
-                  ))}
-                </div>
                 {order.status === "UNPAID" && order.paymentMethod === "TRANSFER_BANK" && (
-                  <UploadProofButton orderId={order.id} />
+                  <div className="mt-4">
+                    <hr />
+                    <NomorRekeningList />
+                    <UploadProofButton orderId={order.id} />
+                  </div>
                 )}
               </CardContent>
             </Card>
