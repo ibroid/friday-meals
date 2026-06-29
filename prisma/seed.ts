@@ -69,20 +69,36 @@ async function main() {
   ];
 
   for (const product of dummyProducts) {
-    const existing = await prisma.product.findFirst({
+    let existing = await prisma.product.findFirst({
       where: { name: product.name }
     });
     if (!existing) {
-      const createdProduct = await prisma.product.create({
+      existing = await prisma.product.create({
         data: product,
       });
-      console.log(`Created product: ${createdProduct.name}`);
+      console.log(`Created product: ${existing.name}`);
     } else {
-      await prisma.product.update({
+      existing = await prisma.product.update({
         where: { id: existing.id },
         data: { imageUrl: product.imageUrl },
       });
       console.log(`Updated product image: ${existing.name}`);
+    }
+
+    // Create dummy gallery images if none exist
+    const galleryCount = await prisma.productGallery.count({
+      where: { productId: existing.id }
+    });
+
+    if (galleryCount === 0) {
+      await prisma.productGallery.createMany({
+        data: [
+          { productId: existing.id, imageUrl: product.imageUrl }, // Primary image
+          { productId: existing.id, imageUrl: "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=800&q=80" }, // Variant 1
+          { productId: existing.id, imageUrl: "https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?w=800&q=80" }, // Variant 2
+        ]
+      });
+      console.log(`Created gallery for: ${existing.name}`);
     }
   }
 
