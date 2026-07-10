@@ -3,7 +3,9 @@ import ProductList from "./ProductList";
 
 export default async function AdminProductsPage() {
   const products = await prisma.product.findMany({
+    where: { isDeleted: false },
     orderBy: { createdAt: "desc" },
+    include: { galleries: true }
   });
 
   const serializedProducts = products.map((product) => ({

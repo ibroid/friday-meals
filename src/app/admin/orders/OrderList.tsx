@@ -5,13 +5,14 @@ import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Eye, MapPin, Phone, Package, Calendar as CalendarIcon, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import Link from "next/link";
 
 type OrderWithRelations = any; // Will match the nested Prisma types from the server
 
@@ -22,6 +23,9 @@ export default function OrderList({ initialOrders }: { initialOrders: OrderWithR
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   const filteredOrders = orders.filter((o) => {
     const matchesPayment = filterPayment === "ALL" || o.paymentMethod === filterPayment;
@@ -45,6 +49,9 @@ export default function OrderList({ initialOrders }: { initialOrders: OrderWithR
     
     return matchesPayment && matchesSearch && matchesDate;
   });
+
+  const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE) || 1;
+  const paginatedOrders = filteredOrders.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   const handleStatusChange = async (orderId: string, newStatus: string) => {
     setUpdatingId(orderId);
@@ -84,7 +91,10 @@ export default function OrderList({ initialOrders }: { initialOrders: OrderWithR
               type="text"
               placeholder="Search ID, Name..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
               className="pl-9 w-full"
             />
           </div>
@@ -102,7 +112,10 @@ export default function OrderList({ initialOrders }: { initialOrders: OrderWithR
                 <Calendar
                   mode="single"
                   selected={startDate}
-                  onSelect={setStartDate}
+                  onSelect={(d) => {
+                    setStartDate(d);
+                    setCurrentPage(1);
+                  }}
                   autoFocus
                 />
               </PopoverContent>
@@ -119,7 +132,10 @@ export default function OrderList({ initialOrders }: { initialOrders: OrderWithR
                 <Calendar
                   mode="single"
                   selected={endDate}
-                  onSelect={setEndDate}
+                  onSelect={(d) => {
+                    setEndDate(d);
+                    setCurrentPage(1);
+                  }}
                   autoFocus
                 />
               </PopoverContent>
@@ -127,7 +143,10 @@ export default function OrderList({ initialOrders }: { initialOrders: OrderWithR
           </div>
 
           {/* Payment Filter */}
-          <Select value={filterPayment} onValueChange={(val) => setFilterPayment(val || "ALL")}>
+          <Select value={filterPayment} onValueChange={(val) => {
+            setFilterPayment(val || "ALL");
+            setCurrentPage(1);
+          }}>
             <SelectTrigger className="w-full lg:w-[180px]">
               <SelectValue placeholder="Semua Pembayaran" />
             </SelectTrigger>
@@ -154,14 +173,14 @@ export default function OrderList({ initialOrders }: { initialOrders: OrderWithR
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filteredOrders.length === 0 ? (
+          {paginatedOrders.length === 0 ? (
             <TableRow>
               <TableCell colSpan={7} className="text-center h-24 text-muted-foreground">
                 No orders found.
               </TableCell>
             </TableRow>
           ) : (
-            filteredOrders.map((order) => (
+            paginatedOrders.map((order) => (
               <TableRow key={order.id}>
                 <TableCell className="font-medium">{order.id.slice(-6).toUpperCase()}</TableCell>
                 <TableCell>
@@ -204,114 +223,9 @@ export default function OrderList({ initialOrders }: { initialOrders: OrderWithR
                   </Select>
                 </TableCell>
                 <TableCell className="text-right">
-                  <Dialog>
-                    <DialogTrigger
-                      render={
-                        <Button variant="ghost" size="icon">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      }
-                    />
-                    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                      <DialogHeader>
-                        <DialogTitle>Order Details - #{order.id.slice(-6).toUpperCase()}</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-6 mt-4">
-                        {/* Customer Info */}
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-1">
-                            <p className="text-sm font-medium text-muted-foreground">Customer</p>
-                            <p className="font-medium">{order.user.name}</p>
-                            <p className="text-sm">{order.user.email}</p>
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-sm font-medium text-muted-foreground">Contact</p>
-                            <div className="flex items-center gap-2">
-                              <Phone className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-sm">{order.phone}</span>
-                            </div>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Calendar className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-sm">{format(new Date(order.createdAt), "dd MMM yyyy, HH:mm")}</span>
-                            </div>
-                            <div className="mt-2 inline-flex items-center rounded-md bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground">
-                              {order.paymentMethod === "TRANSFER_BANK" ? "Transfer Bank" : "QRIS"}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Payment Proof */}
-                        {order.paymentProofUrl && (
-                          <div className="space-y-2 border-t pt-4">
-                            <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                              Bukti Pembayaran
-                            </p>
-                            <a href={order.paymentProofUrl} target="_blank" rel="noopener noreferrer" className="block w-48 h-64 relative rounded-md overflow-hidden border hover:opacity-90 transition-opacity">
-                              <Image src={order.paymentProofUrl} alt="Bukti Pembayaran" fill sizes="192px" className="object-cover" />
-                            </a>
-                          </div>
-                        )}
-
-                        {/* Address & Map */}
-                        <div className="space-y-2 border-t pt-4">
-                          <div className="flex items-start gap-2">
-                            <MapPin className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                            <div>
-                              <p className="text-sm font-medium text-muted-foreground">Delivery Address</p>
-                              <p className="text-sm mt-1">{order.shippingAddress}</p>
-                            </div>
-                          </div>
-                          {order.latitude && order.longitude && (
-                            <div className="mt-3 h-[200px] w-full rounded-md overflow-hidden border">
-                              <iframe
-                                src={`https://maps.google.com/maps?q=${order.latitude},${order.longitude}&z=15&output=embed`}
-                                width="100%"
-                                height="100%"
-                                style={{ border: 0 }}
-                                allowFullScreen={false}
-                                loading="lazy"
-                              ></iframe>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Order Items */}
-                        <div className="space-y-3 border-t pt-4">
-                          <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                            <Package className="h-4 w-4" /> Ordered Items
-                          </p>
-                          <div className="space-y-3">
-                            {order.orderItems.map((item: any) => (
-                              <div key={item.id} className="flex justify-between items-center bg-muted/50 p-3 rounded-lg">
-                                <div className="flex items-center gap-3">
-                                  {item.product.imageUrl && (
-                                    <div className="w-12 h-12 relative rounded overflow-hidden">
-                                      <Image src={item.product.imageUrl} alt={item.product.name} fill sizes="48px" className="object-cover" />
-                                    </div>
-                                  )}
-                                  <div>
-                                    <p className="font-medium text-sm">{item.product.name}</p>
-                                    <p className="text-xs text-muted-foreground">Rp {Number(item.price).toLocaleString("id-ID")} x {item.quantity}</p>
-                                  </div>
-                                </div>
-                                <p className="font-semibold text-sm">
-                                  Rp {(Number(item.price) * item.quantity).toLocaleString("id-ID")}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Total Summary */}
-                        <div className="flex justify-between items-center border-t pt-4">
-                          <span className="font-semibold text-lg">Total Payment</span>
-                          <span className="font-bold text-xl text-primary">
-                            Rp {Number(order.total).toLocaleString("id-ID")}
-                          </span>
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                  <Link href={`/admin/orders/${order.id}`} className={buttonVariants({ variant: "ghost", size: "icon" })}>
+                    <Eye className="h-4 w-4" />
+                  </Link>
                 </TableCell>
               </TableRow>
             ))
@@ -319,6 +233,32 @@ export default function OrderList({ initialOrders }: { initialOrders: OrderWithR
         </TableBody>
       </Table>
     </div>
+
+    {filteredOrders.length > 0 && (
+      <div className="flex items-center justify-between mt-4">
+        <p className="text-sm text-muted-foreground">
+          Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, filteredOrders.length)} of {filteredOrders.length} entries
+        </p>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+          >
+            Previous
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+          >
+            Next
+          </Button>
+        </div>
+      </div>
+    )}
     </div>
   );
 }

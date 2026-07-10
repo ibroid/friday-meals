@@ -199,7 +199,9 @@ export default function CheckoutClient() {
                           <SelectItem value="QRIS">QRIS</SelectItem>
                         </SelectContent>
                       </Select>
-                      {form.watch("paymentMethod") === "QRIS" && (
+                      {
+                        // eslint-disable-next-line react-hooks/incompatible-library
+                        form.watch("paymentMethod") === "QRIS" && (
                         <div className="mt-3 p-3 bg-yellow-500/10 border border-yellow-500/50 rounded-md text-yellow-600 text-sm font-medium">
                           Maaf, fitur pembayaran dengan QRIS belum tersedia untuk saat ini. Silakan pilih metode Transfer Bank.
                         </div>

@@ -1,13 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import Image from "next/image";
-import Link from "next/link";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import ProductDetailModal from "@/components/products/ProductDetailModal";
 
 export default async function Home() {
   const products = await prisma.product.findMany({
+    where: { isDeleted: false },
     orderBy: { createdAt: "desc" },
     include: {
       galleries: true,
@@ -79,7 +77,7 @@ export default async function Home() {
                   </p>
                 </CardContent>
                 <CardFooter>
-                  <ProductDetailModal product={{ ...product, price: Number(product.price) } as any} />
+                  <ProductDetailModal product={{ ...product, price: Number(product.price) } as unknown as any} />
                 </CardFooter>
               </Card>
             ))

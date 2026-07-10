@@ -9,7 +9,9 @@ const productSchema = z.object({
   description: z.string().optional(),
   price: z.coerce.number().min(0),
   stock: z.coerce.number().min(0).int(),
-  imageUrl: z.string().url().optional().or(z.literal("")),
+  images: z.array(z.string()).optional(),
+  ingredients: z.string().optional(),
+  expiryDate: z.string().optional().nullable(),
 });
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -31,9 +33,25 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         description: data.description,
         price: data.price,
         stock: data.stock,
-        imageUrl: data.imageUrl || null,
+        ingredients: data.ingredients,
+        expiryDate: data.expiryDate ? new Date(data.expiryDate) : null,
+        imageUrl: data.images && data.images.length > 0 ? data.images[0] : null,
       },
     });
+
+    if (data.images !== undefined) {
+      await prisma.productGallery.deleteMany({
+        where: { productId: id }
+      });
+      if (data.images.length > 1) {
+        await prisma.productGallery.createMany({
+          data: data.images.slice(1).map(url => ({
+            productId: id,
+            imageUrl: url
+          }))
+        });
+      }
+    }
 
     return NextResponse.json({ message: "Product updated successfully", product }, { status: 200 });
   } catch (error) {
@@ -53,8 +71,9 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    await prisma.product.delete({
+    await prisma.product.update({
       where: { id },
+      data: { isDeleted: true },
     });
 
     return NextResponse.json({ message: "Product deleted successfully" }, { status: 200 });

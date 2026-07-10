@@ -211,7 +211,7 @@ export default function Navbar() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => {
                   clearCart();
-                  signOut();
+                  signOut({ callbackUrl: window.location.origin });
                 }} className="cursor-pointer text-destructive focus:text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>

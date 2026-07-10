@@ -9,7 +9,9 @@ const productSchema = z.object({
   description: z.string().optional(),
   price: z.coerce.number().min(0),
   stock: z.coerce.number().min(0).int(),
-  imageUrl: z.string().url().optional().or(z.literal("")),
+  images: z.array(z.string()).optional(),
+  ingredients: z.string().optional(),
+  expiryDate: z.string().optional().nullable(),
 });
 
 export async function POST(req: Request) {
@@ -29,7 +31,14 @@ export async function POST(req: Request) {
         description: data.description,
         price: data.price,
         stock: data.stock,
-        imageUrl: data.imageUrl || null,
+        ingredients: data.ingredients,
+        expiryDate: data.expiryDate ? new Date(data.expiryDate) : null,
+        imageUrl: data.images && data.images.length > 0 ? data.images[0] : null,
+        galleries: {
+          create: data.images && data.images.length > 1 
+            ? data.images.slice(1).map(url => ({ imageUrl: url }))
+            : []
+        }
       },
     });
 
@@ -45,6 +54,7 @@ export async function POST(req: Request) {
 export async function GET(req: Request) {
   try {
     const products = await prisma.product.findMany({
+      where: { isDeleted: false },
       orderBy: { createdAt: "desc" },
     });
 

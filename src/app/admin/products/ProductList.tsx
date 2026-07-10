@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Product } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,22 +21,42 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-export default function ProductList({ initialProducts }: { initialProducts: Product[] }) {
+// Extend Product to include galleries if passed from server
+interface ProductWithGalleries extends Product {
+  galleries?: { imageUrl: string }[];
+}
+
+export default function ProductList({ initialProducts }: { initialProducts: ProductWithGalleries[] }) {
   const router = useRouter();
-  const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [products, setProducts] = useState<ProductWithGalleries[]>(initialProducts);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editingProduct, setEditingProduct] = useState<ProductWithGalleries | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Search and Pagination State
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
+
+  // Sync products when server component re-renders (via router.refresh)
+  useEffect(() => {
+    setProducts(initialProducts);
+  }, [initialProducts]);
 
   // Form State
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
+  const [ingredients, setIngredients] = useState("");
+  const [expiryDate, setExpiryDate] = useState("");
+  
+  // Array of images. Can be an existing URL (string) or a newly uploaded File
+  const [images, setImages] = useState<{ url: string; file: File | null }[]>([]);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   const openAddDialog = () => {
     setEditingProduct(null);
@@ -44,30 +64,167 @@ export default function ProductList({ initialProducts }: { initialProducts: Prod
     setDescription("");
     setPrice("");
     setStock("0");
-    setImageUrl("");
+    setIngredients("");
+    setExpiryDate("");
+    setImages([]);
     setIsDialogOpen(true);
   };
 
-  const openEditDialog = (product: Product) => {
+  const openEditDialog = (product: ProductWithGalleries) => {
     setEditingProduct(product);
     setName(product.name);
     setDescription(product.description || "");
     setPrice(product.price.toString());
     setStock(product.stock.toString());
-    setImageUrl(product.imageUrl || "");
+    setIngredients(product.ingredients || "");
+    setExpiryDate(product.expiryDate ? new Date(product.expiryDate).toISOString().split('T')[0] : "");
+    
+    // Load existing images
+    const existingImages = [];
+    if (product.imageUrl) {
+      existingImages.push({ url: product.imageUrl, file: null });
+    }
+    if (product.galleries) {
+      product.galleries.forEach(g => {
+        existingImages.push({ url: g.imageUrl, file: null });
+      });
+    }
+    setImages(existingImages);
     setIsDialogOpen(true);
+  };
+
+  // Utility to resize and crop image to exactly 512x512
+  const resizeAndCropImage = (file: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const size = 512;
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            return reject(new Error("Failed to get canvas context"));
+          }
+
+          // Calculate crop dimensions for 1:1 aspect ratio centered
+          const minDim = Math.min(img.width, img.height);
+          const startX = (img.width - minDim) / 2;
+          const startY = (img.height - minDim) / 2;
+
+          ctx.drawImage(img, startX, startY, minDim, minDim, 0, 0, size, size);
+          
+          canvas.toBlob((blob) => {
+            if (!blob) return reject(new Error("Canvas to Blob failed"));
+            const newFile = new File([blob], file.name, {
+              type: file.type,
+              lastModified: Date.now(),
+            });
+            resolve(newFile);
+          }, file.type);
+        };
+        img.onerror = () => reject(new Error("Failed to load image"));
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = () => reject(new Error("Failed to read file"));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const filesArray = Array.from(e.target.files);
+      setIsUploadingImage(true);
+      
+      try {
+        const newImages = await Promise.all(
+          filesArray.map(async (file) => {
+            const resizedFile = await resizeAndCropImage(file);
+            return {
+              url: URL.createObjectURL(resizedFile),
+              file: resizedFile
+            };
+          })
+        );
+        
+        setImages(prev => [...prev, ...newImages]);
+      } catch (error) {
+        console.error("Failed to process images", error);
+        alert("Failed to process some images. Make sure they are valid image files.");
+      } finally {
+        setIsUploadingImage(false);
+      }
+      
+      // Reset input
+      e.target.value = '';
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setImages(prev => {
+      const newImages = [...prev];
+      // Revoke object URL to avoid memory leaks
+      if (newImages[index].file) {
+        URL.revokeObjectURL(newImages[index].url);
+      }
+      newImages.splice(index, 1);
+      return newImages;
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
+    const finalImageUrls: string[] = [];
+
+    // Upload all new files
+    for (const image of images) {
+      if (image.file) {
+        setIsUploadingImage(true);
+        try {
+          const formData = new FormData();
+          formData.append("file", image.file);
+
+          const uploadRes = await fetch("/api/upload", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (uploadRes.ok) {
+            const uploadData = await uploadRes.json();
+            finalImageUrls.push(uploadData.url);
+          } else {
+            alert("Failed to upload an image");
+            setIsUploadingImage(false);
+            setIsLoading(false);
+            return;
+          }
+        } catch (error) {
+          console.error("Upload error", error);
+          alert("Upload error");
+          setIsUploadingImage(false);
+          setIsLoading(false);
+          return;
+        }
+      } else {
+        // Existing image
+        finalImageUrls.push(image.url);
+      }
+    }
+    
+    setIsUploadingImage(false);
+
     const payload = {
       name,
       description,
       price: Number(price),
       stock: Number(stock),
-      imageUrl,
+      images: finalImageUrls,
+      ingredients,
+      expiryDate: expiryDate || null,
     };
 
     try {
@@ -83,16 +240,16 @@ export default function ProductList({ initialProducts }: { initialProducts: Prod
       if (res.ok) {
         setIsDialogOpen(false);
         router.refresh();
-        // Optimistic update
-        if (editingProduct) {
-          setProducts(products.map(p => p.id === editingProduct.id ? { ...p, ...payload, price: payload.price as any } : p));
-        } else {
-          const { product } = await res.json();
-          setProducts([product, ...products]);
-        }
+        
+        // Let's do a hard refresh to get the updated data from server since galleries are complex
+        // router.refresh() will take care of re-fetching Server Components
+      } else {
+        const errorData = await res.json();
+        alert(errorData.message || "Something went wrong");
       }
     } catch (error) {
       console.error(error);
+      alert("Failed to save product");
     } finally {
       setIsLoading(false);
     }
@@ -112,19 +269,21 @@ export default function ProductList({ initialProducts }: { initialProducts: Prod
     }
   };
 
+  const filteredProducts = products.filter(p => 
+    p.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE) || 1;
+  const paginatedProducts = filteredProducts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-semibold">All Products</h2>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger
-            render={
-              <Button onClick={openAddDialog}>
-                <Plus className="mr-2 h-4 w-4" /> Add Product
-              </Button>
-            }
-          />
-          <DialogContent>
+          <DialogTrigger render={<Button onClick={openAddDialog} />}>
+            <Plus className="mr-2 h-4 w-4" /> Add Product
+          </DialogTrigger>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingProduct ? "Edit Product" : "Add New Product"}</DialogTitle>
             </DialogHeader>
@@ -135,7 +294,15 @@ export default function ProductList({ initialProducts }: { initialProducts: Prod
               </div>
               <div className="space-y-2">
                 <Label htmlFor="description">Description</Label>
-                <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} />
+                <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} rows={4} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ingredients">Ingredients</Label>
+                <Textarea id="ingredients" value={ingredients} onChange={(e) => setIngredients(e.target.value)} rows={3} placeholder="e.g. Flour, Sugar, Butter" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="expiryDate">Expired Date</Label>
+                <Input type="date" id="expiryDate" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -147,22 +314,68 @@ export default function ProductList({ initialProducts }: { initialProducts: Prod
                   <Input id="stock" type="number" min="0" value={stock} onChange={(e) => setStock(e.target.value)} required />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="imageUrl">Image URL (Optional)</Label>
-                <Input id="imageUrl" type="url" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." />
+              
+              <div className="space-y-4">
+                <Label>Product Images (Automatically cropped to 1:1, 512x512)</Label>
+                
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {images.map((img, idx) => (
+                    <div key={idx} className="relative group aspect-square rounded-md overflow-hidden border">
+                      <img src={img.url} alt={`Preview ${idx}`} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(idx)}
+                        className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                  
+                  <label className="border-2 border-dashed rounded-md aspect-square flex flex-col items-center justify-center cursor-pointer hover:bg-muted/50 transition-colors">
+                    <Plus className="h-8 w-8 text-muted-foreground mb-2" />
+                    <span className="text-sm text-muted-foreground text-center px-2">Upload Photo</span>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      multiple 
+                      className="hidden" 
+                      onChange={handleImageChange}
+                      disabled={isUploadingImage}
+                    />
+                  </label>
+                </div>
+                {isUploadingImage && <p className="text-sm text-muted-foreground">Processing images...</p>}
               </div>
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Saving..." : "Save Product"}
+              
+              <Button type="submit" className="w-full mt-6" disabled={isLoading || isUploadingImage}>
+                {isLoading || isUploadingImage ? "Saving..." : "Save Product"}
               </Button>
             </form>
           </DialogContent>
         </Dialog>
       </div>
 
+      <div className="flex justify-between items-center mb-4">
+        <div className="relative w-full max-w-sm">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search products..."
+            className="pl-8"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
+          />
+        </div>
+      </div>
+
       <div className="border rounded-lg overflow-hidden bg-background">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Image</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Price</TableHead>
               <TableHead>Stock</TableHead>
@@ -170,15 +383,22 @@ export default function ProductList({ initialProducts }: { initialProducts: Prod
             </TableRow>
           </TableHeader>
           <TableBody>
-            {products.length === 0 ? (
+            {paginatedProducts.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center text-muted-foreground h-24">
+                <TableCell colSpan={5} className="text-center text-muted-foreground h-24">
                   No products found.
                 </TableCell>
               </TableRow>
             ) : (
-              products.map((product) => (
+              paginatedProducts.map((product) => (
                 <TableRow key={product.id}>
+                  <TableCell>
+                    <div className="w-12 h-12 rounded overflow-hidden bg-muted">
+                      {product.imageUrl && (
+                        <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell className="font-medium">{product.name}</TableCell>
                   <TableCell>Rp {Number(product.price).toLocaleString("id-ID")}</TableCell>
                   <TableCell>{product.stock}</TableCell>
@@ -196,6 +416,32 @@ export default function ProductList({ initialProducts }: { initialProducts: Prod
           </TableBody>
         </Table>
       </div>
+
+      {filteredProducts.length > 0 && (
+        <div className="flex items-center justify-between mt-4">
+          <p className="text-sm text-muted-foreground">
+            Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, filteredProducts.length)} of {filteredProducts.length} entries
+          </p>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

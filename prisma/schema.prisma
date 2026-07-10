@@ -41,6 +41,7 @@ model Product {
   imageUrl    String?          @db.Text
   ingredients String?          @db.Text
   expiryDate  DateTime?
+  isDeleted   Boolean          @default(false)
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
   orderItems  OrderItem[]
@@ -63,6 +64,7 @@ model Order {
   paymentProofUrl String?       @db.Text
   user            User          @relation(fields: [userId], references: [id])
   orderItems      OrderItem[]
+  expedition      Expedition?
 
   @@index([userId], map: "Order_userId_fkey")
 }
@@ -135,5 +137,19 @@ model AfterSale {
 
   @@index([productId])
   @@index([userId])
+}
+
+model Expedition {
+  id                String   @id @default(cuid())
+  orderId           String   @unique
+  alamatTujuan      String   @db.Text
+  nomorTelepon      String
+  namaTujuan        String
+  nomorResi         String?
+  jenisEkspedisi    String?
+  hasilFotoUrl      String?  @db.Text
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  order             Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
 

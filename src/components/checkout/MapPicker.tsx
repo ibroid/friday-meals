@@ -58,6 +58,7 @@ export default function MapPicker({ position, onChange }: MapPickerProps) {
   const defaultCenter: [number, number] = [-6.2088, 106.8456]; // Jakarta default
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     return () => setMapId((prev) => prev + 1);
   }, []);

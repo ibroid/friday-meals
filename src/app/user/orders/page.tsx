@@ -7,6 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import UploadProofButton from "./UploadProofButton";
 import NomorRekeningList from "./NomorRekeningList";
+import ReviewModalButton from "./ReviewModalButton";
+import Image from "next/image";
+import { Package } from "lucide-react";
 
 export default async function UserOrdersPage(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -30,6 +33,10 @@ export default async function UserOrdersPage(props: {
         },
       },
     },
+  });
+
+  const afterSales = await prisma.afterSale.findMany({
+    where: { userId: session.user.id },
   });
 
   return (
@@ -60,7 +67,44 @@ export default async function UserOrdersPage(props: {
                 </Badge>
               </CardHeader>
               <CardContent className="pt-4">
-                <div className="flex justify-between mb-4">
+                <div className="space-y-4 mb-6">
+                  {order.orderItems.map((item: any) => {
+                    const existingReview = afterSales.find((a) => a.productId === item.productId);
+                    return (
+                      <div key={item.id} className="flex justify-between items-center bg-muted/30 p-3 rounded-lg border">
+                        <div className="flex items-center gap-3">
+                          {item.product.imageUrl ? (
+                            <div className="w-12 h-12 relative rounded overflow-hidden border">
+                              <Image src={item.product.imageUrl} alt={item.product.name} fill sizes="48px" className="object-cover" />
+                            </div>
+                          ) : (
+                            <div className="w-12 h-12 bg-muted rounded flex items-center justify-center border">
+                              <Package className="h-4 w-4 text-muted-foreground/50" />
+                            </div>
+                          )}
+                          <div>
+                            <p className="font-semibold text-sm">{item.product.name}</p>
+                            <p className="text-xs text-muted-foreground">Rp {Number(item.price).toLocaleString("id-ID")} x {item.quantity}</p>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <p className="font-bold text-sm">
+                            Rp {(Number(item.price) * item.quantity).toLocaleString("id-ID")}
+                          </p>
+                          {order.status === "DELIVERED" && (
+                            <ReviewModalButton 
+                              productId={item.productId} 
+                              productName={item.product.name}
+                              existingReview={existingReview}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="flex justify-between border-t pt-4">
                   <div>
                     <h4 className="font-medium text-sm text-muted-foreground">Shipping Details</h4>
                     <p className="text-sm">{order.shippingAddress}</p>
@@ -68,7 +112,7 @@ export default async function UserOrdersPage(props: {
                   </div>
                   <div className="text-right">
                     <h4 className="font-medium text-sm text-muted-foreground">Total</h4>
-                    <p className="font-bold">Rp {Number(order.total).toLocaleString("id-ID")}</p>
+                    <p className="font-bold text-lg text-primary">Rp {Number(order.total).toLocaleString("id-ID")}</p>
                   </div>
                 </div>
                 {order.status === "UNPAID" && order.paymentMethod === "TRANSFER_BANK" && (
