@@ -22,7 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -41,11 +41,23 @@ export default function UserList({ initialUsers }: { initialUsers: UserWithCount
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filterRole, setFilterRole] = useState<"ALL" | "USER" | "ADMIN">("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
+  
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   const filteredUsers = users.filter((user) => {
-    if (filterRole === "ALL") return true;
-    return user.role === filterRole;
+    const matchesRole = filterRole === "ALL" || user.role === filterRole;
+    const searchLower = searchQuery.toLowerCase();
+    const matchesSearch = !searchQuery || 
+      user.name?.toLowerCase().includes(searchLower) || 
+      user.email?.toLowerCase().includes(searchLower);
+    
+    return matchesRole && matchesSearch;
   });
+
+  const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE) || 1;
+  const paginatedUsers = filteredUsers.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   // Form State
   const [name, setName] = useState("");
@@ -152,10 +164,30 @@ export default function UserList({ initialUsers }: { initialUsers: UserWithCount
     <div>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-semibold">Registered Users</h2>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div className="relative w-full sm:w-[200px]">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-muted-foreground">
+              <Search className="h-4 w-4" />
+            </div>
+            <Input
+              type="text"
+              placeholder="Search users..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="pl-9 w-full"
+            />
+          </div>
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-muted-foreground">Filter:</span>
-            <Select value={filterRole} onValueChange={(val) => { if (val) setFilterRole(val as "ALL" | "USER" | "ADMIN") }}>
+            <span className="text-sm font-medium text-muted-foreground">Role:</span>
+            <Select value={filterRole} onValueChange={(val) => { 
+              if (val) {
+                setFilterRole(val as "ALL" | "USER" | "ADMIN");
+                setCurrentPage(1);
+              }
+            }}>
               <SelectTrigger className="w-[120px]">
                 <SelectValue placeholder="All Roles" />
               </SelectTrigger>
@@ -250,14 +282,14 @@ export default function UserList({ initialUsers }: { initialUsers: UserWithCount
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredUsers.length === 0 ? (
+            {paginatedUsers.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
                   No users found.
                 </TableCell>
               </TableRow>
             ) : (
-              filteredUsers.map((user) => (
+              paginatedUsers.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
@@ -269,7 +301,7 @@ export default function UserList({ initialUsers }: { initialUsers: UserWithCount
                   <TableCell>
                     <Badge variant="secondary">{user._count.orders}</Badge>
                   </TableCell>
-                  <TableCell>
+                  <TableCell suppressHydrationWarning>
                     {user.createdAt ? format(new Date(user.createdAt), "dd MMM yyyy") : "-"}
                   </TableCell>
                   <TableCell className="text-right">
@@ -291,6 +323,32 @@ export default function UserList({ initialUsers }: { initialUsers: UserWithCount
           </TableBody>
         </Table>
       </div>
+      
+      {filteredUsers.length > 0 && (
+        <div className="flex items-center justify-between mt-4">
+          <p className="text-sm text-muted-foreground">
+            Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, filteredUsers.length)} of {filteredUsers.length} entries
+          </p>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

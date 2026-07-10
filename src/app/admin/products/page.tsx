@@ -13,10 +13,14 @@ export default async function AdminProductsPage() {
     price: Number(product.price),
   }));
 
+  const categories = await prisma.foodCategory.findMany({
+    orderBy: { name: "asc" }
+  });
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Products Management</h1>
-      <ProductList initialProducts={serializedProducts as any} />
+      <ProductList initialProducts={serializedProducts as any} categories={categories} />
     </div>
   );
 }

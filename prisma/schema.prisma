@@ -42,6 +42,8 @@ model Product {
   ingredients String?          @db.Text
   expiryDate  DateTime?
   isDeleted   Boolean          @default(false)
+  categoryId  String?
+  category    FoodCategory?    @relation(fields: [categoryId], references: [id])
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
   orderItems  OrderItem[]
@@ -137,6 +139,15 @@ model AfterSale {
 
   @@index([productId])
   @@index([userId])
+}
+
+model FoodCategory {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  iconUrl   String?   @db.Text
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  products  Product[]
 }
 
 model Expedition {

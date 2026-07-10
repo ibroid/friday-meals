@@ -23,13 +23,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Plus, Pencil, Trash2, X, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Extend Product to include galleries if passed from server
 interface ProductWithGalleries extends Product {
   galleries?: { imageUrl: string }[];
 }
 
-export default function ProductList({ initialProducts }: { initialProducts: ProductWithGalleries[] }) {
+export default function ProductList({ initialProducts, categories = [] }: { initialProducts: ProductWithGalleries[], categories?: any[] }) {
   const router = useRouter();
   const [products, setProducts] = useState<ProductWithGalleries[]>(initialProducts);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -53,6 +54,7 @@ export default function ProductList({ initialProducts }: { initialProducts: Prod
   const [stock, setStock] = useState("");
   const [ingredients, setIngredients] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
+  const [categoryId, setCategoryId] = useState("");
   
   // Array of images. Can be an existing URL (string) or a newly uploaded File
   const [images, setImages] = useState<{ url: string; file: File | null }[]>([]);
@@ -66,6 +68,7 @@ export default function ProductList({ initialProducts }: { initialProducts: Prod
     setStock("0");
     setIngredients("");
     setExpiryDate("");
+    setCategoryId("");
     setImages([]);
     setIsDialogOpen(true);
   };
@@ -78,6 +81,7 @@ export default function ProductList({ initialProducts }: { initialProducts: Prod
     setStock(product.stock.toString());
     setIngredients(product.ingredients || "");
     setExpiryDate(product.expiryDate ? new Date(product.expiryDate).toISOString().split('T')[0] : "");
+    setCategoryId(product.categoryId || "");
     
     // Load existing images
     const existingImages = [];
@@ -225,6 +229,7 @@ export default function ProductList({ initialProducts }: { initialProducts: Prod
       images: finalImageUrls,
       ingredients,
       expiryDate: expiryDate || null,
+      categoryId: categoryId || null,
     };
 
     try {
@@ -294,8 +299,26 @@ export default function ProductList({ initialProducts }: { initialProducts: Prod
               </div>
               <div className="space-y-2">
                 <Label htmlFor="description">Description</Label>
-                <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} rows={4} />
+                <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="category">Category</Label>
+                <Select value={categoryId} onValueChange={(val) => setCategoryId(val || "")}>
+                  <SelectTrigger id="category">
+                    <SelectValue placeholder="Pilih kategori">
+                      {categoryId ? categories.find(c => c.id === categoryId)?.name : "Pilih kategori"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Tanpa Kategori</SelectItem>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="ingredients">Ingredients</Label>
                 <Textarea id="ingredients" value={ingredients} onChange={(e) => setIngredients(e.target.value)} rows={3} placeholder="e.g. Flour, Sugar, Butter" />

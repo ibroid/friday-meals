@@ -16,37 +16,45 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="flex flex-1 overflow-hidden">
-      <aside className="w-64 border-r bg-muted/20 hidden md:block overflow-y-auto">
-        <nav className="flex flex-col gap-2 p-4">
-          <Link href="/admin" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted transition-colors">
-            <LayoutDashboard className="h-5 w-5 text-muted-foreground" />
-            <span>Dashboard</span>
-          </Link>
-          <Link href="/admin/products" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted transition-colors">
-            <Package className="h-5 w-5 text-muted-foreground" />
-            <span>Products</span>
-          </Link>
-          <Link href="/admin/orders" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted transition-colors">
-            <ShoppingCart className="h-5 w-5 text-muted-foreground" />
-            <span>Orders</span>
-          </Link>
-          <Link href="/admin/users" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted transition-colors">
-            <Users className="h-5 w-5 text-muted-foreground" />
-            <span>Users</span>
-          </Link>
-          <Link href="/admin/bank-accounts" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted transition-colors">
-            <Landmark className="h-5 w-5 text-muted-foreground" />
-            <span>Rekening Bank</span>
-          </Link>
-          <Link href="/admin/settings" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted transition-colors">
-            <Settings className="h-5 w-5 text-muted-foreground" />
-            <span>Company Info</span>
-          </Link>
-        </nav>
-      </aside>
-      <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-muted/10">
-        {children}
+    <div className="flex flex-col flex-1 min-h-screen">
+      <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container mx-auto px-4 max-w-7xl">
+          <nav className="flex items-center justify-center gap-2 h-16 overflow-x-auto no-scrollbar">
+            <Link href="/admin" className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-muted transition-colors whitespace-nowrap text-sm font-medium">
+              <LayoutDashboard className="h-4 w-4 text-muted-foreground" />
+              <span>Dashboard</span>
+            </Link>
+            <Link href="/admin/products" className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-muted transition-colors whitespace-nowrap text-sm font-medium">
+              <Package className="h-4 w-4 text-muted-foreground" />
+              <span>Products</span>
+            </Link>
+            <Link href="/admin/categories" className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-muted transition-colors whitespace-nowrap text-sm font-medium">
+              <Package className="h-4 w-4 text-muted-foreground" />
+              <span>Categories</span>
+            </Link>
+            <Link href="/admin/orders" className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-muted transition-colors whitespace-nowrap text-sm font-medium">
+              <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+              <span>Orders</span>
+            </Link>
+            <Link href="/admin/users" className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-muted transition-colors whitespace-nowrap text-sm font-medium">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <span>Users</span>
+            </Link>
+            <Link href="/admin/bank-accounts" className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-muted transition-colors whitespace-nowrap text-sm font-medium">
+              <Landmark className="h-4 w-4 text-muted-foreground" />
+              <span>Rekening Bank</span>
+            </Link>
+            <Link href="/admin/settings" className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-muted transition-colors whitespace-nowrap text-sm font-medium">
+              <Settings className="h-4 w-4 text-muted-foreground" />
+              <span>Company Info</span>
+            </Link>
+          </nav>
+        </div>
+      </header>
+      <main className="flex-1 w-full bg-muted/10">
+        <div className="container mx-auto px-4 py-8 max-w-7xl">
+          {children}
+        </div>
       </main>
     </div>
   );

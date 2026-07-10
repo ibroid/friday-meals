@@ -29,6 +29,9 @@ export const metadata: Metadata = {
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import FloatingWhatsApp from "@/components/layout/FloatingWhatsApp";
+import FloatingIconsBackground from "@/components/layout/FloatingIconsBackground";
+import MeshGradientBackground from "@/components/layout/MeshGradientBackground";
+import SvgPatternBackground from "@/components/layout/SvgPatternBackground";
 import { Providers } from "./providers";
 
 export default function RootLayout({
@@ -39,11 +42,16 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
+        {/* <MeshGradientBackground /> */}
+        <SvgPatternBackground />
+        <FloatingIconsBackground />
         <Providers>
-          <Navbar />
-          <main className="flex-1 flex flex-col">{children}</main>
-          <Footer />
-          <FloatingWhatsApp />
+          <div className="relative z-10 flex flex-1 flex-col w-full">
+            <Navbar />
+            <main className="flex-1 flex flex-col">{children}</main>
+            <Footer />
+            <FloatingWhatsApp />
+          </div>
         </Providers>
       </body>
     </html>
