@@ -186,6 +186,7 @@
 
 @theme {
   --animate-float-up-spin: float-up-spin 20s linear forwards;
+  --animate-float-up-spin-reverse: float-up-spin-reverse 20s linear forwards;
   --animate-blob: blob 20s infinite alternate;
   
   @keyframes blob {
@@ -216,6 +217,23 @@
     }
     100% {
       transform: translateY(-110vh) rotate(360deg);
+      opacity: 0;
+    }
+  }
+
+  @keyframes float-up-spin-reverse {
+    0% {
+      transform: translateY(0) rotate(0deg);
+      opacity: 0;
+    }
+    10% {
+      opacity: 0.7;
+    }
+    90% {
+      opacity: 0.7;
+    }
+    100% {
+      transform: translateY(-110vh) rotate(-360deg);
       opacity: 0;
     }
   }

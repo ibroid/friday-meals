@@ -9,6 +9,7 @@ type AnimatedIcon = {
   left: string;
   animationDuration: string;
   delay: string;
+  animationClass: string;
 };
 
 export default function FloatingIconsBackground() {
@@ -51,6 +52,7 @@ export default function FloatingIconsBackground() {
         left: `${leftPosition}%`,
         animationDuration: `${randomDuration}s`,
         delay: '0s',
+        animationClass: Math.random() < 0.5 ? "animate-float-up-spin" : "animate-float-up-spin-reverse",
       };
 
       setIcons((prev) => {
@@ -75,7 +77,7 @@ export default function FloatingIconsBackground() {
       {icons.map((icon) => (
         <div
           key={icon.id}
-          className="absolute bottom-[-100px] opacity-0 animate-float-up-spin"
+          className={`absolute bottom-[-100px] opacity-0 ${icon.animationClass}`}
           style={{
             left: icon.left,
             animationDuration: icon.animationDuration,
