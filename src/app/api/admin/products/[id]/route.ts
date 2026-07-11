@@ -11,7 +11,7 @@ const productSchema = z.object({
   stock: z.coerce.number().min(0).int(),
   images: z.array(z.string()).optional(),
   ingredients: z.string().optional(),
-  expiryDate: z.string().optional().nullable(),
+  expiredDays: z.coerce.number().optional().nullable(),
   categoryId: z.string().optional().nullable(),
 });
 
@@ -35,7 +35,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         price: data.price,
         stock: data.stock,
         ingredients: data.ingredients,
-        expiryDate: data.expiryDate ? new Date(data.expiryDate) : null,
+        expiredDays: data.expiredDays,
         categoryId: data.categoryId || null,
         imageUrl: data.images && data.images.length > 0 ? data.images[0] : null,
       },

@@ -85,6 +85,11 @@ export default async function UserOrdersPage(props: {
                           <div>
                             <p className="font-semibold text-sm">{item.product.name}</p>
                             <p className="text-xs text-muted-foreground">Rp {Number(item.price).toLocaleString("id-ID")} x {item.quantity}</p>
+                            {(order.status === "SHIPPED" || order.status === "DELIVERED") && item.expiredDate && (
+                              <p className="text-xs font-medium text-orange-600 mt-1">
+                                Exp: {format(new Date(item.expiredDate), "dd MMM yyyy")}
+                              </p>
+                            )}
                           </div>
                         </div>
                         <div className="flex flex-col items-end gap-2">

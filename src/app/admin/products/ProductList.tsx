@@ -29,6 +29,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 interface ProductWithGalleries extends Product {
   galleries?: { imageUrl: string }[];
   category?: { id: string; name: string; iconUrl?: string | null } | null;
+  expiredDays: number | null;
 }
 
 export default function ProductList({ initialProducts, categories = [] }: { initialProducts: ProductWithGalleries[], categories?: any[] }) {
@@ -54,9 +55,9 @@ export default function ProductList({ initialProducts, categories = [] }: { init
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
   const [ingredients, setIngredients] = useState("");
-  const [expiryDate, setExpiryDate] = useState("");
+  const [expiredDays, setExpiredDays] = useState("");
   const [categoryId, setCategoryId] = useState("");
-  
+
   // Array of images. Can be an existing URL (string) or a newly uploaded File
   const [images, setImages] = useState<{ url: string; file: File | null }[]>([]);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -68,7 +69,7 @@ export default function ProductList({ initialProducts, categories = [] }: { init
     setPrice("");
     setStock("0");
     setIngredients("");
-    setExpiryDate("");
+    setExpiredDays("");
     setCategoryId("");
     setImages([]);
     setIsDialogOpen(true);
@@ -81,9 +82,9 @@ export default function ProductList({ initialProducts, categories = [] }: { init
     setPrice(product.price.toString());
     setStock(product.stock.toString());
     setIngredients(product.ingredients || "");
-    setExpiryDate(product.expiryDate ? new Date(product.expiryDate).toISOString().split('T')[0] : "");
+    setExpiredDays(product.expiredDays ? product.expiredDays.toString() : "");
     setCategoryId(product.categoryId || "");
-    
+
     // Load existing images
     const existingImages = [];
     if (product.imageUrl) {
@@ -120,7 +121,7 @@ export default function ProductList({ initialProducts, categories = [] }: { init
           const startY = (img.height - minDim) / 2;
 
           ctx.drawImage(img, startX, startY, minDim, minDim, 0, 0, size, size);
-          
+
           canvas.toBlob((blob) => {
             if (!blob) return reject(new Error("Canvas to Blob failed"));
             const newFile = new File([blob], file.name, {
@@ -142,7 +143,7 @@ export default function ProductList({ initialProducts, categories = [] }: { init
     if (e.target.files && e.target.files.length > 0) {
       const filesArray = Array.from(e.target.files);
       setIsUploadingImage(true);
-      
+
       try {
         const newImages = await Promise.all(
           filesArray.map(async (file) => {
@@ -153,7 +154,7 @@ export default function ProductList({ initialProducts, categories = [] }: { init
             };
           })
         );
-        
+
         setImages(prev => [...prev, ...newImages]);
       } catch (error) {
         console.error("Failed to process images", error);
@@ -161,7 +162,7 @@ export default function ProductList({ initialProducts, categories = [] }: { init
       } finally {
         setIsUploadingImage(false);
       }
-      
+
       // Reset input
       e.target.value = '';
     }
@@ -192,6 +193,7 @@ export default function ProductList({ initialProducts, categories = [] }: { init
         try {
           const formData = new FormData();
           formData.append("file", image.file);
+          formData.append("folder", "products");
 
           const uploadRes = await fetch("/api/upload", {
             method: "POST",
@@ -219,7 +221,7 @@ export default function ProductList({ initialProducts, categories = [] }: { init
         finalImageUrls.push(image.url);
       }
     }
-    
+
     setIsUploadingImage(false);
 
     const payload = {
@@ -229,7 +231,7 @@ export default function ProductList({ initialProducts, categories = [] }: { init
       stock: Number(stock),
       images: finalImageUrls,
       ingredients,
-      expiryDate: expiryDate || null,
+      expiredDays: expiredDays ? Number(expiredDays) : null,
       categoryId: categoryId || null,
     };
 
@@ -246,7 +248,7 @@ export default function ProductList({ initialProducts, categories = [] }: { init
       if (res.ok) {
         setIsDialogOpen(false);
         router.refresh();
-        
+
         // Let's do a hard refresh to get the updated data from server since galleries are complex
         // router.refresh() will take care of re-fetching Server Components
       } else {
@@ -263,7 +265,7 @@ export default function ProductList({ initialProducts, categories = [] }: { init
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this product?")) return;
-    
+
     try {
       const res = await fetch(`/api/admin/products/${id}`, { method: "DELETE" });
       if (res.ok) {
@@ -275,7 +277,7 @@ export default function ProductList({ initialProducts, categories = [] }: { init
     }
   };
 
-  const filteredProducts = products.filter(p => 
+  const filteredProducts = products.filter(p =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
   const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE) || 1;
@@ -325,8 +327,8 @@ export default function ProductList({ initialProducts, categories = [] }: { init
                 <Textarea id="ingredients" value={ingredients} onChange={(e) => setIngredients(e.target.value)} rows={3} placeholder="e.g. Flour, Sugar, Butter" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="expiryDate">Expired Date</Label>
-                <Input type="date" id="expiryDate" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} />
+                <Label htmlFor="expiredDays">Masa Kedaluwarsa (Hari)</Label>
+                <Input type="number" id="expiredDays" min="0" placeholder="Berapa hari setelah produk dikirim?" value={expiredDays} onChange={(e) => setExpiredDays(e.target.value)} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -338,10 +340,10 @@ export default function ProductList({ initialProducts, categories = [] }: { init
                   <Input id="stock" type="number" min="0" value={stock} onChange={(e) => setStock(e.target.value)} required />
                 </div>
               </div>
-              
+
               <div className="space-y-4">
                 <Label>Product Images (Automatically cropped to 1:1, 512x512)</Label>
-                
+
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {images.map((img, idx) => (
                     <div key={idx} className="relative group aspect-square rounded-md overflow-hidden border">
@@ -355,15 +357,15 @@ export default function ProductList({ initialProducts, categories = [] }: { init
                       </button>
                     </div>
                   ))}
-                  
+
                   <label className="border-2 border-dashed rounded-md aspect-square flex flex-col items-center justify-center cursor-pointer hover:bg-muted/50 transition-colors">
                     <Plus className="h-8 w-8 text-muted-foreground mb-2" />
                     <span className="text-sm text-muted-foreground text-center px-2">Upload Photo</span>
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      multiple 
-                      className="hidden" 
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
                       onChange={handleImageChange}
                       disabled={isUploadingImage}
                     />
@@ -371,7 +373,7 @@ export default function ProductList({ initialProducts, categories = [] }: { init
                 </div>
                 {isUploadingImage && <p className="text-sm text-muted-foreground">Processing images...</p>}
               </div>
-              
+
               <Button type="submit" className="w-full mt-6" disabled={isLoading || isUploadingImage}>
                 {isLoading || isUploadingImage ? "Saving..." : "Save Product"}
               </Button>
@@ -460,17 +462,17 @@ export default function ProductList({ initialProducts, categories = [] }: { init
             Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, filteredProducts.length)} of {filteredProducts.length} entries
           </p>
           <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
             >
               Previous
             </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
             >

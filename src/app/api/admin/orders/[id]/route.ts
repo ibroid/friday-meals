@@ -17,7 +17,7 @@ export async function PUT(
 
     const { id } = params;
     const body = await req.json();
-    const { status } = body;
+    const { status, expiredDates } = body;
 
     const validStatuses = ["UNPAID", "PENDING", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"];
     if (!validStatuses.includes(status)) {
@@ -30,6 +30,15 @@ export async function PUT(
 
     if (!existingOrder) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    }
+
+    if (status === "SHIPPED" && expiredDates) {
+      for (const orderItemId of Object.keys(expiredDates)) {
+        await prisma.orderItem.update({
+          where: { id: orderItemId },
+          data: { expiredDate: new Date(expiredDates[orderItemId]) }
+        });
+      }
     }
 
     const updatedOrder = await prisma.order.update({

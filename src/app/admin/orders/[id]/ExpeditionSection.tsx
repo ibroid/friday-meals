@@ -36,6 +36,7 @@ export default function ExpeditionSection({ order, initialExpedition }: { order:
       if (file) {
         const uploadData = new FormData();
         uploadData.append("file", file);
+        uploadData.append("folder", "expeditions");
         const uploadRes = await fetch("/api/admin/upload", { method: "POST", body: uploadData });
         if (uploadRes.ok) {
           const { url } = await uploadRes.json();

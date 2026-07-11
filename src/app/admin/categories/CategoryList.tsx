@@ -115,6 +115,7 @@ export default function CategoryList({ initialCategories }: { initialCategories:
     if (iconFile) {
       const formData = new FormData();
       formData.append("file", iconFile);
+      formData.append("folder", "categories");
       try {
         const uploadRes = await fetch("/api/upload", {
           method: "POST",

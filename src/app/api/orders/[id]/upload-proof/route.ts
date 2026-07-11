@@ -46,7 +46,7 @@ export async function POST(
     }
 
     // Prepare uploads directory
-    const uploadsDir = path.join(process.cwd(), "public", "uploads");
+    const uploadsDir = path.join(process.cwd(), "public", "uploads", "proofs");
     if (!existsSync(uploadsDir)) {
       await mkdir(uploadsDir, { recursive: true });
     }
@@ -60,7 +60,7 @@ export async function POST(
 
     // Save file
     await writeFile(filePath, buffer);
-    const publicUrl = `/uploads/${filename}`;
+    const publicUrl = `/uploads/proofs/${filename}`;
 
     // Update order
     const updatedOrder = await prisma.order.update({

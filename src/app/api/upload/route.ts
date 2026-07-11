@@ -14,6 +14,7 @@ export async function POST(req: Request) {
 
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
+    const folder = (formData.get("folder") as string) || "misc";
 
     if (!file) {
       return NextResponse.json({ message: "No file uploaded" }, { status: 400 });
@@ -24,7 +25,7 @@ export async function POST(req: Request) {
     }
 
     // Prepare uploads directory
-    const uploadsDir = path.join(process.cwd(), "public", "uploads", "products");
+    const uploadsDir = path.join(process.cwd(), "public", "uploads", folder);
     if (!existsSync(uploadsDir)) {
       await mkdir(uploadsDir, { recursive: true });
     }
@@ -39,7 +40,7 @@ export async function POST(req: Request) {
 
     // Save file
     await writeFile(filePath, buffer);
-    const publicUrl = `/uploads/products/${filename}`;
+    const publicUrl = `/uploads/${folder}/${filename}`;
 
     return NextResponse.json({
       message: "File uploaded successfully",

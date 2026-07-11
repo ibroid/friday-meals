@@ -24,6 +24,9 @@ export default function OrderList({ initialOrders }: { initialOrders: OrderWithR
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
 
+  const [shippingOrder, setShippingOrder] = useState<OrderWithRelations | null>(null);
+  const [expiredDates, setExpiredDates] = useState<Record<string, string>>({});
+
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
 
@@ -53,13 +56,13 @@ export default function OrderList({ initialOrders }: { initialOrders: OrderWithR
   const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE) || 1;
   const paginatedOrders = filteredOrders.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
-  const handleStatusChange = async (orderId: string, newStatus: string) => {
+  const handleStatusChange = async (orderId: string, newStatus: string, additionalPayload: any = {}) => {
     setUpdatingId(orderId);
     try {
       const res = await fetch(`/api/admin/orders/${orderId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status: newStatus, ...additionalPayload }),
       });
 
       if (res.ok) {
@@ -74,6 +77,30 @@ export default function OrderList({ initialOrders }: { initialOrders: OrderWithR
       alert("An unexpected error occurred");
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  const handleStatusSelect = (order: OrderWithRelations, newStatus: string) => {
+    if (newStatus === "SHIPPED") {
+      const initialDates: Record<string, string> = {};
+      order.orderItems?.forEach((item: any) => {
+        if (item.product?.expiredDays) {
+          const date = new Date();
+          date.setDate(date.getDate() + item.product.expiredDays);
+          initialDates[item.id] = format(date, "yyyy-MM-dd");
+        }
+      });
+      setExpiredDates(initialDates);
+      setShippingOrder(order);
+    } else {
+      handleStatusChange(order.id, newStatus);
+    }
+  };
+
+  const handleShippedSubmit = () => {
+    if (shippingOrder) {
+      handleStatusChange(shippingOrder.id, "SHIPPED", { expiredDates });
+      setShippingOrder(null);
     }
   };
 
@@ -199,7 +226,7 @@ export default function OrderList({ initialOrders }: { initialOrders: OrderWithR
                 <TableCell>
                   <Select 
                     value={order.status} 
-                    onValueChange={(val) => { if (val) handleStatusChange(order.id, val) }}
+                    onValueChange={(val) => { if (val) handleStatusSelect(order, val) }}
                     disabled={updatingId === order.id}
                   >
                     <SelectTrigger className={`w-[140px] h-8 text-xs font-semibold ${
@@ -259,6 +286,36 @@ export default function OrderList({ initialOrders }: { initialOrders: OrderWithR
         </div>
       </div>
     )}
+
+    {/* Shipping Dialog */}
+    <Dialog open={!!shippingOrder} onOpenChange={(open) => !open && setShippingOrder(null)}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Masa Kedaluwarsa Produk</DialogTitle>
+        </DialogHeader>
+        <div className="py-4 space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Sebelum mengirim pesanan, harap tentukan masa kedaluwarsa untuk masing-masing produk (terisi otomatis sesuai batas hari produk).
+          </p>
+          {shippingOrder?.orderItems?.map((item: any) => (
+            <div key={item.id} className="flex flex-col gap-2">
+              <label className="text-sm font-medium">{item.product.name} (Qty: {item.quantity})</label>
+              <Input 
+                type="date" 
+                value={expiredDates[item.id] || ""} 
+                onChange={(e) => setExpiredDates({ ...expiredDates, [item.id]: e.target.value })} 
+                required 
+              />
+            </div>
+          ))}
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={() => setShippingOrder(null)}>Batal</Button>
+          <Button onClick={handleShippedSubmit}>Konfirmasi Pengiriman</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+
     </div>
   );
 }

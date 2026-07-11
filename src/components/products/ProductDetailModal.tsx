@@ -139,11 +139,13 @@ export default function ProductDetailModal({
                 </div>
               )}
 
-              {product.expiryDate && (
+              {product.expiredDays !== null && product.expiredDays !== undefined && (
                 <div>
-                  <h4 className="font-semibold text-sm mb-1">Expiry Date</h4>
+                  <h4 className="font-semibold text-sm mb-1">Masa Kedaluwarsa</h4>
                   <p className="text-sm text-muted-foreground">
-                    {format(new Date(product.expiryDate), "dd MMMM yyyy")}
+                    {product.expiredDays % 30 === 0 && product.expiredDays > 0 
+                      ? `${product.expiredDays / 30} bulan` 
+                      : `${product.expiredDays} hari`} setelah pengiriman
                   </p>
                 </div>
               )}
