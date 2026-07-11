@@ -5,7 +5,7 @@ export default async function AdminProductsPage() {
   const products = await prisma.product.findMany({
     where: { isDeleted: false },
     orderBy: { createdAt: "desc" },
-    include: { galleries: true }
+    include: { galleries: true, category: true }
   });
 
   const serializedProducts = products.map((product) => ({

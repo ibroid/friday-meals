@@ -28,6 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 // Extend Product to include galleries if passed from server
 interface ProductWithGalleries extends Product {
   galleries?: { imageUrl: string }[];
+  category?: { id: string; name: string; iconUrl?: string | null } | null;
 }
 
 export default function ProductList({ initialProducts, categories = [] }: { initialProducts: ProductWithGalleries[], categories?: any[] }) {
@@ -400,6 +401,7 @@ export default function ProductList({ initialProducts, categories = [] }: { init
             <TableRow>
               <TableHead>Image</TableHead>
               <TableHead>Name</TableHead>
+              <TableHead>Category</TableHead>
               <TableHead>Price</TableHead>
               <TableHead>Stock</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -408,7 +410,7 @@ export default function ProductList({ initialProducts, categories = [] }: { init
           <TableBody>
             {paginatedProducts.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground h-24">
+                <TableCell colSpan={6} className="text-center text-muted-foreground h-24">
                   No products found.
                 </TableCell>
               </TableRow>
@@ -423,6 +425,18 @@ export default function ProductList({ initialProducts, categories = [] }: { init
                     </div>
                   </TableCell>
                   <TableCell className="font-medium">{product.name}</TableCell>
+                  <TableCell>
+                    {product.category ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-md bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground">
+                        {product.category.iconUrl && (
+                          <img src={product.category.iconUrl} alt="" className="w-4 h-4 object-contain" />
+                        )}
+                        {product.category.name}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
                   <TableCell>Rp {Number(product.price).toLocaleString("id-ID")}</TableCell>
                   <TableCell>{product.stock}</TableCell>
                   <TableCell className="text-right">
