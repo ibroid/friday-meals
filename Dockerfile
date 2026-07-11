@@ -49,6 +49,7 @@ RUN bun add prisma@latest
 # Create an entrypoint script
 RUN echo '#!/bin/sh' > /app/entrypoint.sh && \
     echo 'bunx prisma db push --accept-data-loss' >> /app/entrypoint.sh && \
+    echo 'bun prisma/seed.ts || true' >> /app/entrypoint.sh && \
     echo 'bun server.js' >> /app/entrypoint.sh && \
     chmod +x /app/entrypoint.sh
 
